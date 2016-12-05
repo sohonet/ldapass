@@ -124,7 +124,7 @@ def index():
                 db_conn.commit()
                 db_conn.close()
 
-                reset_url = 'http://{hostname}:{port}/reset/{link_id}'.format(
+                reset_url = 'https://{hostname}/reset/{link_id}'.format(
                     hostname=conf.get('app', 'hostname'),
                     port=conf.get('app', 'listen_port'),
                     link_id=link_id
