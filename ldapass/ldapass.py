@@ -105,7 +105,7 @@ def index():
                         link_id=link_id,
                         created=datetime.datetime.now()
                     ))
-                    flash('Email containing password reset url has been sent \
+                    flash('An email containing password a reset url has been sent \
                         to {mail}'.format(mail=form.mail.data))
                 else:
                     db_curs.execute(
@@ -118,7 +118,7 @@ def index():
                         link_id=link_id,
                         created=datetime.datetime.now()
                     ))
-                    flash('Email containing password reset url has been sent \
+                    flash('An Email containing password a reset url has been sent \
                         to {mail}. Previous reset urls have been \
                         invalidated.'.format(mail=form.mail.data))
                 db_conn.commit()
@@ -132,11 +132,10 @@ def index():
                 send_mail(form.mail.data, reset_url)
             elif len(result_data) > 1:
                 error = 'More than one user found with email address of \
-                    {mail}. Plese, get in touch with LDAP administration \
-                    team.'.format(mail=form.mail.data)
+                    {mail}. Please, get in touch with the LDAP administration'.format(mail=form.mail.data)
             else:
-                error = 'No user found with email address of {mail}. Plese, \
-                    get in touch with LDAP administration.'.format(
+                error = 'No user found with email address of {mail}. Please, \
+                    get in touch with the LDAP administration.'.format(
                     mail=form.mail.data)
             return render_template('index.html', error=error, form=form)
 
