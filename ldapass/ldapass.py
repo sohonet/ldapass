@@ -47,8 +47,8 @@ def send_mail(mail, reset_url):
         Hi,
         Your LDAP password reset link is:
         {reset_url}
-        This url will be valid for next 24 hours. In case of any issues, \
-        please, get in touch with someone from LDAP administration.
+        This url will be valid for next 24 hours. If you have any issues, \
+        issues with this process, contact a LDAP administrator.
         '''.format(reset_url=reset_url))
     msg['Subject'] = 'LDAP password reset link'
     msg['To'] = mail
@@ -105,7 +105,7 @@ def index():
                         link_id=link_id,
                         created=datetime.datetime.now()
                     ))
-                    flash('An email containing password a reset url has been sent \
+                    flash('An email containing a password reset URL has been sent \
                         to {mail}'.format(mail=form.mail.data))
                 else:
                     db_curs.execute(
@@ -118,8 +118,8 @@ def index():
                         link_id=link_id,
                         created=datetime.datetime.now()
                     ))
-                    flash('An Email containing password a reset url has been sent \
-                        to {mail}. Previous reset urls have been \
+                    flash('An Email containing a password reset URL has been sent \
+                        to {mail}. Previous reset URLs have been \
                         invalidated.'.format(mail=form.mail.data))
                 db_conn.commit()
                 db_conn.close()
@@ -132,11 +132,9 @@ def index():
                 send_mail(form.mail.data, reset_url)
             elif len(result_data) > 1:
                 error = 'More than one user found with email address of \
-                    {mail}. Please, get in touch with the LDAP administration'.format(mail=form.mail.data)
+                    {mail}. Please get in touch with an LDAP administrator'.format(mail=form.mail.data)
             else:
-                error = 'No user found with email address of {mail}. Please, \
-                    get in touch with the LDAP administration.'.format(
-                    mail=form.mail.data)
+                error = 'No user found with email address of {mail}.'.format(mail=form.mail.data)
             return render_template('index.html', error=error, form=form)
 
         else:
@@ -197,7 +195,7 @@ def reset(link_id):
                         None,
                         '{passwd}'.format(passwd=form.passwd.data))
                 except ldap.LDAPError as error:
-                    error = 'LDAP error: {error}, please get in touch with \
+                    error = 'LDAP error: {error}, \
                         LDAP administration.'.format(error=error)
                     return render_template(
                         'reset.html',
