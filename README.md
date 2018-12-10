@@ -32,6 +32,12 @@ $ cp /var/www/ldapass/examples/ldapass.conf /var/www/ldapass/ldapass/
 $ vi /var/www/ldapass/ldapass/ldapass.conf
 ```
 
+Bootstrap the database:
+
+```sh
+$ LDAPASS_CONFIG=/var/www/ldapass/ldapass/ldapass.conf python /var/www/ldapass/ldapass/ldapass.py -b
+```
+
 Copy the Nginx nginx_ldapass.example.com.conf configuration file into your OS Nginx config directory and edit it with appropriate values:
 
 ```sh
