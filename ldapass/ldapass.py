@@ -3,6 +3,7 @@ import datetime
 import os
 import smtplib
 import sqlite3
+import sys
 import time
 import uuid
 
@@ -35,9 +36,9 @@ class PasswordForm(Form):
     passwd_confirm = PasswordField('Confirm new password')
 
 
-def parse_arguments(description):
+def parse_arguments(description=''):
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('-c', action="store", dest="conf_file", required=True)
+    parser.add_argument('-b', action="store_true", dest="bootstrap", required=False)
     return parser.parse_args()
 
 
@@ -223,6 +224,8 @@ def reset(link_id):
 if __name__ == '__main__':
     conf = RawConfigParser()
     conf.read(os.environ['LDAPASS_CONFIG'])
+    
+    args = parse_arguments()
 
     # test if the database exists, and create it if not, with proper warning
     db_conn = sqlite3.connect(conf.get('app', 'database'))
@@ -246,7 +249,12 @@ if __name__ == '__main__':
     else:
         print('SQLite file {database} found.').format(
             database=conf.get('app', 'database'))
+        if args.bootstrap:
+            print('WARNING: bootstrap option ignored as SQLite file exists')
     db_conn.close()
 
+    if args.bootstrap:
+        sys.exit(0)
+    
     app.run(host=conf.get('app', 'listen_addr'),
             port=conf.getint('app', 'listen_port'), debug=True)
