@@ -18,3 +18,4 @@ Thumbs.db
 *.pyc
 ###################
 ldapass.sql
+ldapass.conf
