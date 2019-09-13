@@ -11,29 +11,38 @@ from ConfigParser import RawConfigParser
 from email.mime.text import MIMEText
 from flask import Flask, flash, request, render_template, redirect, url_for
 import ldap
-from wtforms import Form, TextField, PasswordField, validators
-
+from flask_wtf import FlaskForm, RecaptchaField
+from wtforms import StringField, PasswordField, SubmitField
+from wtforms.validators import DataRequired, Email, EqualTo, Length
 
 app = Flask('__name__')
-app.secret_key = os.urandom(128)
+app.config['SECRET_KEY'] = os.environ['LDAPASS_SECRET']
 conf = RawConfigParser()
 conf.read(os.environ['LDAPASS_CONFIG'])
 
+DEBUG = False
+MIN_PASSWORD_LENGTH = 15
 
-class EmailForm(Form):
-    mail = TextField('Email address', [
-        validators.Required(),
-        validators.Length(min=5, max=250),
-        validators.Email()
-    ])
+app.config['RECAPTCHA_PUBLIC_KEY'] = os.environ['RECAPTCHA_PUBLIC_KEY']
+app.config['RECAPTCHA_PRIVATE_KEY'] = os.environ['RECAPTCHA_PRIVATE_KEY']
+
+class EmailForm(FlaskForm):
+    mail = StringField('Email address', validators=[DataRequired(), Email()],
+                       render_kw={"placeholder": "Your LDAP user email address"})
+    recaptcha = RecaptchaField()
+    submit = SubmitField("Submit", render_kw={"class": "btn btn-primary"})
 
 
-class PasswordForm(Form):
-    passwd = PasswordField('New password', [
-        validators.Required(),
-        validators.EqualTo('passwd_confirm', message='Passwords must match')
-    ])
-    passwd_confirm = PasswordField('Confirm new password')
+class PasswordForm(FlaskForm):
+    passwd = PasswordField('New password',
+                           validators=[DataRequired(),
+                                       EqualTo('passwd_confirm', message="Password confirmation doesn't match the password"),
+                                       Length(min=MIN_PASSWORD_LENGTH, message="Password is too short"),
+                                       ],
+                           render_kw={"placeholder": "Type in desired password"})
+    passwd_confirm = PasswordField('Confirm new password',
+                                   render_kw={"placeholder": "Retype desired password"})
+    submit = SubmitField("Update Password", render_kw={"class": "btn btn-primary"})
 
 
 def parse_arguments(description=''):
@@ -62,12 +71,11 @@ def send_mail(mail, reset_url):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     error = None
-    form = EmailForm(request.form)
+    form = EmailForm()
     if request.method == 'GET':
         return render_template('index.html', error=error, form=form)
-
     elif request.method == 'POST':
-        if form.validate():
+        if form.validate_on_submit():
             ldap_uri = 'ldap://{addr}:{port}'.format(
                 addr=conf.get('ldap', 'addr'), port=conf.get('ldap', 'port'))
             try:
@@ -146,7 +154,7 @@ def index():
 @app.route('/reset/<link_id>', methods=['GET', 'POST'])
 def reset(link_id):
     error = None
-    form = PasswordForm(request.form)
+    form = PasswordForm()
 
     db_conn = sqlite3.connect(conf.get('app', 'database'))
     db_curs = db_conn.cursor()
@@ -166,7 +174,7 @@ def reset(link_id):
                 link_id=link_id)
 
         if request.method == 'POST':
-            if form.validate():
+            if form.validate_on_submit():
                 ldap_uri = 'ldap://{addr}:{port}'.format(
                     addr=conf.get('ldap', 'addr'),
                     port=conf.get('ldap', 'port')
@@ -213,7 +221,8 @@ def reset(link_id):
                 return redirect(url_for('index'))
             else:
                 error = 'The form is invalid, please try again.'
-                return render_template('reset.html', error=error, form=form)
+                return render_template('reset.html', error=error, form=form,
+                                       link_id=link_id)
     else:
         db_conn.close()
         error = 'There is no such password reset id {link_id}'.format(
@@ -224,7 +233,7 @@ def reset(link_id):
 if __name__ == '__main__':
     conf = RawConfigParser()
     conf.read(os.environ['LDAPASS_CONFIG'])
-    
+
     args = parse_arguments()
 
     # test if the database exists, and create it if not, with proper warning
@@ -255,6 +264,6 @@ if __name__ == '__main__':
 
     if args.bootstrap:
         sys.exit(0)
-    
+
     app.run(host=conf.get('app', 'listen_addr'),
-            port=conf.getint('app', 'listen_port'), debug=True)
+            port=conf.getint('app', 'listen_port'), debug=DEBUG)

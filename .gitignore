@@ -16,3 +16,6 @@ Thumbs.db
 *.o
 *.so
 *.pyc
+###################
+ldapass.sql
+ldapass.conf
