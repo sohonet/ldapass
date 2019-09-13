@@ -21,16 +21,21 @@
         </div>
         {% endif %}
         <form role="form" method="post" action="/reset/{{ link_id }}" class="form-horizontal">
+		{{ form.hidden_tag() }}
           <div class="form-group">
             <label for="passwd" class="col-sm-3 control-label">{{ form.passwd.label }}</label>
             <div class="col-sm-6">
-                <input id="passwd" name="passwd" type="password" class="form-control" placeholder="Type in desired password">
+	            {% for error in form.passwd.errors %}
+	            <span style="color: red;">{{ error }}</span>
+	            {% endfor %}
+		    {{ form.passwd(size=55) }}
             </div>
           </div>
           <div class="form-group">
-            <label for="passwd" class="col-sm-3 control-label">{{ form.passwd_confirm.label }}</label>
-            <div class="col-sm-6">
-                <input id="passwd_confirm" name="passwd_confirm" type="password" class="form-control" placeholder="Retype desired password">
+          <label for="passwd" class="col-sm-3 control-label">{{ form.passwd_confirm.label }}</label>
+          <div class="col-sm-6">
+		    {{ form.passwd_confirm(size=55) }}
+	  <div> Make sure it's at least 15 characters in length</div>
             </div>
           </div>
           <div class="progress">
@@ -38,7 +43,7 @@
           </div>
           <div class="form-group">
             <div class="col-sm-offset-3 col-sm-6">
-              <button class="btn btn-primary" type="submit">Submit</button>
+		    {{ form.submit() }}
             </div>
           </div>
         </form>
