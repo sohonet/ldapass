@@ -203,13 +203,22 @@ def reset(link_id):
                             basedn=conf.get('ldap', 'basedn')),
                         None,
                         '{passwd}'.format(passwd=form.passwd.data))
-                except ldap.LDAPError as error:
-                    error = 'LDAP error: {error}, \
-                        LDAP administration.'.format(error=error)
+                except ldap.CONSTRAINT_VIOLATION:
+                    error = 'LDAP error: Password does comply with \
+                                     the password policy set on your LDAP server' 
                     return render_template(
                         'reset.html',
                         error=error,
-                        form=form
+                        form=form,
+                        link_id=link_id
+                    )
+                except ldap.LDAPError as error:
+                    error = 'LDAP error: {error}'.format(error=error)
+                    return render_template(
+                        'reset.html',
+                        error=error,
+                        form=form,
+                        link_id=link_id
                     )
                 flash('Password for account {mail} has been changed.'.format(
                     mail=db_data[0][1]))
