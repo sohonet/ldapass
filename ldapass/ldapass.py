@@ -85,14 +85,14 @@ def index():
                     ldap_uri, trace_level=conf.get('app', 'ldap_debug'))
                 l.start_tls_s()
             except ldap.LDAPError as error:
-                return render_template('index.html', error=error, form=form)
+                return render_template('index.html', error=error, form=form), 400
             try:
                 search_filter = 'mail={mail}'.format(mail=form.mail.data)
                 ldap_result_id = l.search(
                     conf.get('ldap', 'basedn'), ldap.SCOPE_SUBTREE,
                     search_filter, None)
             except ldap.LDAPError as error:
-                return render_template('index.html', error=error, form=form)
+                return render_template('index.html', error=error, form=form), 400
             result_type, result_data = l.result(ldap_result_id, 0)
             if len(result_data) == 1:
                 link_id = '{uuid}-{account}'.format(
@@ -144,11 +144,11 @@ def index():
                     {mail}. Please get in touch with an LDAP administrator'.format(mail=form.mail.data)
             else:
                 error = 'No user found with email address of {mail}.'.format(mail=form.mail.data)
-            return render_template('index.html', error=error, form=form)
+            return render_template('index.html', error=error, form=form), 404
 
         else:
             error = 'The mail address you have filled is invalid.'
-            return render_template('index.html', error=error, form=form)
+            return render_template('index.html', error=error, form=form), 400
 
 
 @app.route('/reset/<link_id>', methods=['GET', 'POST'])
@@ -185,7 +185,7 @@ def reset(link_id):
                     l = ldap.initialize(ldap_uri)
                     l.start_tls_s()
                 except ldap.LDAPError as error:
-                    return render_template('error.html', error=error)
+                    return render_template('error.html', error=error), 400
                 try:
                     search_filter = 'mail={mail}'.format(mail=db_data[0][1])
                     ldap_result_id = l.search(
@@ -210,7 +210,7 @@ def reset(link_id):
                         error=error,
                         form=form,
                         link_id=link_id
-                    )
+                    ), 400
                 except ldap.LDAPError as error:
                     error = 'LDAP error: {error}'.format(error=error)
                     return render_template(
@@ -218,7 +218,7 @@ def reset(link_id):
                         error=error,
                         form=form,
                         link_id=link_id
-                    )
+                    ), 400
                 flash('Password for account {mail} has been changed.'.format(
                     mail=db_data[0][1]))
                 db_curs.execute(
@@ -230,12 +230,12 @@ def reset(link_id):
             else:
                 error = 'The form is invalid, please try again.'
                 return render_template('reset.html', error=error, form=form,
-                                       link_id=link_id)
+                                       link_id=link_id), 400
     else:
         db_conn.close()
         error = 'There is no such password reset id {link_id}'.format(
             link_id=link_id)
-        return render_template('error.html', error=error)
+        return render_template('error.html', error=error), 404
 
 
 if __name__ == '__main__':
