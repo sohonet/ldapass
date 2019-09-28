@@ -182,8 +182,7 @@ def reset(link_id):
                 try:
                     ldap.set_option(
                         ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
-                    l = ldap.initialize(
-                        ldap_uri, trace_level=conf.get('app', 'ldap_debug'))
+                    l = ldap.initialize(ldap_uri)
                     l.start_tls_s()
                 except ldap.LDAPError as error:
                     return render_template('error.html', error=error)
