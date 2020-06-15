@@ -3,3 +3,4 @@ Flask-WTF
 WTForms
 python-ldap
 gunicorn
+flask-mail-sendgrid

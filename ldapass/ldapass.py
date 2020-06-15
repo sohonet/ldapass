@@ -1,22 +1,23 @@
 import argparse
 import datetime
 import os
-import smtplib
 import sqlite3
 import sys
 import time
 import uuid
 
 from ConfigParser import RawConfigParser
-from email.mime.text import MIMEText
 from flask import Flask, flash, request, render_template, redirect, url_for
 import ldap
 from flask_wtf import FlaskForm, RecaptchaField
+from flask_mail_sendgrid import MailSendGrid
+from flask_mail import Message
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo, Length
 
 app = Flask('__name__')
 app.config['SECRET_KEY'] = os.environ['LDAPASS_SECRET']
+app.config['MAIL_SENDGRID_API_KEY'] = os.environ['LDAPASS_MAILKEY']
 conf = RawConfigParser()
 conf.read(os.environ['LDAPASS_CONFIG'])
 
@@ -25,6 +26,8 @@ MIN_PASSWORD_LENGTH = 15
 
 app.config['RECAPTCHA_PUBLIC_KEY'] = os.environ['RECAPTCHA_PUBLIC_KEY']
 app.config['RECAPTCHA_PRIVATE_KEY'] = os.environ['RECAPTCHA_PRIVATE_KEY']
+
+flaskmail = MailSendGrid(app)
 
 class EmailForm(FlaskForm):
     mail = StringField('Email address', validators=[DataRequired(), Email()],
@@ -52,21 +55,17 @@ def parse_arguments(description=''):
 
 
 def send_mail(mail, reset_url):
-    msg = MIMEText(
-        '''
+    msg = Message('LDAP password reset link',
+                  sender='noreply@sohonet.com',
+                  recipients=[mail])
+    msg.body = '''
         Hi,
         Your LDAP password reset link is:
         {reset_url}
         This url will be valid for next 24 hours. If you have any issues, \
         issues with this process, contact a LDAP administrator.
-        '''.format(reset_url=reset_url))
-    msg['Subject'] = 'LDAP password reset link'
-    msg['To'] = mail
-    msg['From'] = 'noreply@nodomain.com'
-    s = smtplib.SMTP(conf.get('app', 'smtp_addr'))
-    s.sendmail(msg['From'], msg['To'], msg.as_string())
-    s.quit()
-
+        '''.format(reset_url=reset_url)
+    flaskmail.send(msg)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
