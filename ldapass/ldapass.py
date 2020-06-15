@@ -11,6 +11,7 @@ from flask import Flask, flash, request, render_template, redirect, url_for
 import ldap
 from flask_wtf import FlaskForm, RecaptchaField
 from flask_mail_sendgrid import MailSendGrid
+from flask_mail import Message
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo, Length
 
@@ -26,7 +27,7 @@ MIN_PASSWORD_LENGTH = 15
 app.config['RECAPTCHA_PUBLIC_KEY'] = os.environ['RECAPTCHA_PUBLIC_KEY']
 app.config['RECAPTCHA_PRIVATE_KEY'] = os.environ['RECAPTCHA_PRIVATE_KEY']
 
-mail = MailSendGrid(app)
+flaskmail = MailSendGrid(app)
 
 class EmailForm(FlaskForm):
     mail = StringField('Email address', validators=[DataRequired(), Email()],
@@ -64,7 +65,7 @@ def send_mail(mail, reset_url):
         This url will be valid for next 24 hours. If you have any issues, \
         issues with this process, contact a LDAP administrator.
         '''.format(reset_url=reset_url)
-    mail.send(msg)
+    flaskmail.send(msg)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
