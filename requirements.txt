@@ -1,6 +1,7 @@
 Flask
 Flask-WTF
 WTForms
+email-validator
 python-ldap
 gunicorn
 flask-mail-sendgrid
