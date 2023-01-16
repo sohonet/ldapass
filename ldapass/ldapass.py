@@ -6,7 +6,7 @@ import sys
 import time
 import uuid
 
-from ConfigParser import RawConfigParser
+from configparser import RawConfigParser
 from flask import Flask, flash, request, render_template, redirect, url_for
 import ldap
 from flask_wtf import FlaskForm, RecaptchaField
@@ -249,9 +249,9 @@ if __name__ == '__main__':
     db_curs.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='mails'")
     if len(db_curs.fetchall()) == 0:
-        print('WARNING: the SQLite file {database} doesnt exist! Sleeping for \
+        print((('WARNING: the SQLite file {database} doesnt exist! Sleeping for \
             10 seconds and creating the database file. KILL ME if this is an \
-            error!').format(database=conf.get('app', 'database'))
+            error!').format(database=conf.get('app', 'database'))))
         time.sleep(10)
         db_curs.execute(
             '''create table mails (
@@ -263,8 +263,8 @@ if __name__ == '__main__':
         db_conn.commit()
         print('Created the sqlite file.')
     else:
-        print('SQLite file {database} found.').format(
-            database=conf.get('app', 'database'))
+        print((('SQLite file {database} found.').format(
+            database=conf.get('app', 'database'))))
         if args.bootstrap:
             print('WARNING: bootstrap option ignored as SQLite file exists')
     db_conn.close()
