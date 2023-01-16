@@ -1,7 +1,7 @@
-Flask
-Flask-WTF
-WTForms
-email-validator
-python-ldap
-gunicorn
-flask-mail-sendgrid
+email-validator==1.3.0
+Flask-Mail-SendGrid==0.3
+Flask-WTF==0.14.3
+Flask==1.1.4
+gunicorn==19.10.0
+python-ldap==3.3.1
+WTForms==2.3.3
