@@ -6,7 +6,7 @@ import sys
 import time
 import uuid
 
-from configparser import RawConfigParser
+from configparser import ConfigParser
 from flask import Flask, flash, request, render_template, redirect, url_for
 import ldap
 from flask_wtf import FlaskForm, RecaptchaField
@@ -18,7 +18,7 @@ from wtforms.validators import DataRequired, Email, EqualTo, Length
 app = Flask('__name__')
 app.config['SECRET_KEY'] = os.environ['LDAPASS_SECRET']
 app.config['MAIL_SENDGRID_API_KEY'] = os.environ['LDAPASS_MAILKEY']
-conf = RawConfigParser()
+conf = ConfigParser(interpolation = None)
 conf.read(os.environ['LDAPASS_CONFIG'])
 
 DEBUG = False
@@ -76,12 +76,12 @@ def index():
     elif request.method == 'POST':
         if form.validate_on_submit():
             ldap_uri = 'ldap://{addr}:{port}'.format(
-                addr=conf.get('ldap', 'addr'), port=conf.get('ldap', 'port'))
+                addr=conf.get('ldap', 'addr'), port=conf.getint('ldap', 'port'))
             try:
                 ldap.set_option(
                     ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
                 l = ldap.initialize(
-                    ldap_uri, trace_level=conf.get('app', 'ldap_debug'))
+                    ldap_uri, trace_level=conf.getint('app', 'ldap_debug'))
                 l.start_tls_s()
             except ldap.LDAPError as error:
                 return render_template('index.html', error=error, form=form), 400
@@ -134,7 +134,7 @@ def index():
 
                 reset_url = 'https://{hostname}/reset/{link_id}'.format(
                     hostname=conf.get('app', 'hostname'),
-                    port=conf.get('app', 'listen_port'),
+                    port=conf.getint('app', 'listen_port'),
                     link_id=link_id
                 )
                 send_mail(form.mail.data, reset_url)
@@ -176,7 +176,7 @@ def reset(link_id):
             if form.validate_on_submit():
                 ldap_uri = 'ldap://{addr}:{port}'.format(
                     addr=conf.get('ldap', 'addr'),
-                    port=conf.get('ldap', 'port')
+                    port=conf.getint('ldap', 'port')
                 )
                 try:
                     ldap.set_option(
