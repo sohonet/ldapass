@@ -197,7 +197,7 @@ def reset(link_id):
                         conf.get('ldap', 'user'), conf.get('ldap', 'pass'))
                     l.passwd_s(
                         'uid={uid},{basedn}'.format(
-                            uid=result_data[0][1]['uid'][0],
+                            uid=result_data[0][1]['uid'][0].decode(),
                             basedn=conf.get('ldap', 'basedn')),
                         None,
                         '{passwd}'.format(passwd=form.passwd.data))
