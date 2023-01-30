@@ -238,7 +238,7 @@ def reset(link_id):
 
 
 if __name__ == '__main__':
-    conf = RawConfigParser()
+    conf = ConfigParser(interpolation = None)
     conf.read(os.environ['LDAPASS_CONFIG'])
 
     args = parse_arguments()
