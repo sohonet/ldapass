@@ -16,6 +16,11 @@ Thumbs.db
 *.o
 *.so
 *.pyc
+*.deb
 ###################
 ldapass.sql
 ldapass.conf
+.env
+.vscode
+/static/
+/templates/

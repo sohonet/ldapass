@@ -10,6 +10,7 @@ from configparser import ConfigParser
 from flask import Flask, flash, request, render_template, redirect, url_for
 import ldap
 from flask_wtf import FlaskForm, RecaptchaField
+from flask_wtf.recaptcha.validators import Recaptcha
 from flask_mail_sendgrid import MailSendGrid
 from flask_mail import Message
 from wtforms import StringField, PasswordField, SubmitField
@@ -30,9 +31,8 @@ app.config['RECAPTCHA_PRIVATE_KEY'] = os.environ['RECAPTCHA_PRIVATE_KEY']
 flaskmail = MailSendGrid(app)
 
 class EmailForm(FlaskForm):
-    mail = StringField('Email address', validators=[DataRequired(), Email()],
-                       render_kw={"placeholder": "Your LDAP user email address"})
-    recaptcha = RecaptchaField()
+    mail = StringField('Email address', validators=[DataRequired(), Email(granular_message=True)], render_kw={"placeholder": "Your LDAP user email address"})
+    recaptcha = RecaptchaField(validators=[Recaptcha(message="recaptcha: Indescribable failure")])
     submit = SubmitField("Submit", render_kw={"class": "btn btn-primary"})
 
 
@@ -62,8 +62,7 @@ def send_mail(mail, reset_url):
         Hi,
         Your LDAP password reset link is:
         {reset_url}
-        This url will be valid for next 24 hours. If you have any issues, \
-        issues with this process, contact a LDAP administrator.
+        This url will be valid for next 24 hours. If you have any issues with this process, contact an LDAP administrator.
         '''.format(reset_url=reset_url)
     flaskmail.send(msg)
 
@@ -71,84 +70,86 @@ def send_mail(mail, reset_url):
 def index():
     error = None
     form = EmailForm()
+
     if request.method == 'GET':
         return render_template('index.html', error=error, form=form)
-    elif request.method == 'POST':
-        if form.validate_on_submit():
-            ldap_uri = 'ldap://{addr}:{port}'.format(
-                addr=conf.get('ldap', 'addr'), port=conf.getint('ldap', 'port'))
-            try:
-                ldap.set_option(
-                    ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
-                l = ldap.initialize(
-                    ldap_uri, trace_level=conf.getint('app', 'ldap_debug'))
-                l.start_tls_s()
-            except ldap.LDAPError as error:
-                return render_template('index.html', error=error, form=form), 400
-            try:
-                search_filter = 'mail={mail}'.format(mail=form.mail.data)
-                ldap_result_id = l.search(
-                    conf.get('ldap', 'basedn'), ldap.SCOPE_SUBTREE,
-                    search_filter, None)
-            except ldap.LDAPError as error:
-                return render_template('index.html', error=error, form=form), 400
-            result_type, result_data = l.result(ldap_result_id, 0)
-            if len(result_data) == 1:
-                link_id = '{uuid}-{account}'.format(
-                    uuid=str(uuid.uuid4()),
-                    account=form.mail.data.split('@')[0]
-                )
 
-                db_conn = sqlite3.connect(conf.get('app', 'database'))
-                db_curs = db_conn.cursor()
-                db_curs.execute(
-                    "SELECT id FROM mails WHERE mail='{mail}'".format(
-                        mail=form.mail.data))
-                db_data = db_curs.fetchall()
-                if len(db_data) == 0:
-                    db_curs.execute(
-                        "INSERT INTO mails (mail, link_id, created) VALUES \
-                        ('{mail}', '{link_id}', '{created}')".format(
-                        mail=form.mail.data,
-                        link_id=link_id,
-                        created=datetime.datetime.now()
-                    ))
-                    flash('An email containing a password reset URL has been sent \
-                        to {mail}'.format(mail=form.mail.data))
-                else:
-                    db_curs.execute(
-                        "DELETE FROM mails WHERE mail='{mail}'".format(
-                            mail=form.mail.data))
-                    db_curs.execute(
-                        "REPLACE INTO mails (mail, link_id, created) VALUES \
-                        ('{mail}', '{link_id}', '{created}')".format(
-                        mail=form.mail.data,
-                        link_id=link_id,
-                        created=datetime.datetime.now()
-                    ))
-                    flash('An Email containing a password reset URL has been sent \
-                        to {mail}. Previous reset URLs have been \
-                        invalidated.'.format(mail=form.mail.data))
-                db_conn.commit()
-                db_conn.close()
-
-                reset_url = 'https://{hostname}/reset/{link_id}'.format(
-                    hostname=conf.get('app', 'hostname'),
-                    port=conf.getint('app', 'listen_port'),
-                    link_id=link_id
-                )
-                send_mail(form.mail.data, reset_url)
-            elif len(result_data) > 1:
-                error = 'More than one user found with email address of \
-                    {mail}. Please get in touch with an LDAP administrator'.format(mail=form.mail.data)
-            else:
-                error = 'No user found with email address of {mail}.'.format(mail=form.mail.data)
-            return render_template('index.html', error=error, form=form), 404
-
-        else:
-            error = 'The mail address you have filled is invalid.'
+    if request.method == 'POST':
+        if not form.validate_on_submit():
+            error = form.errors
             return render_template('index.html', error=error, form=form), 400
 
+        ldap_uri = 'ldap://{addr}:{port}'.format(
+            addr=conf.get('ldap', 'addr'), port=conf.getint('ldap', 'port'))
+        try:
+            ldap.set_option(
+                ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
+            l = ldap.initialize(
+                ldap_uri, trace_level=conf.getint('app', 'ldap_debug'))
+            l.start_tls_s()
+        except ldap.LDAPError as error:
+            return render_template('index.html', error=error, form=form), 400
+        try:
+            search_filter = 'mail={mail}'.format(mail=form.mail.data)
+            ldap_result_id = l.search(
+                conf.get('ldap', 'basedn'), ldap.SCOPE_SUBTREE,
+                search_filter, None)
+        except ldap.LDAPError as error:
+            return render_template('index.html', error=error, form=form), 400
+        _, result_data = l.result(ldap_result_id, 0)
+
+        if len(result_data) > 1:
+            error = 'More than one user found with email address of {mail}. Please get in touch with an LDAP administrator'.format(mail=form.mail.data)
+            return render_template('index.html', error=error, form=form), 404
+        elif len(result_data) != 1:
+            error = 'No user found with email address of {mail}.'.format(mail=form.mail.data)
+            return render_template('index.html', error=error, form=form), 404
+
+        link_id = '{uuid}-{account}'.format(
+            uuid=str(uuid.uuid4()),
+            account=form.mail.data.split('@')[0]
+        )
+
+        db_conn = sqlite3.connect(conf.get('app', 'database'))
+        db_curs = db_conn.cursor()
+        db_curs.execute(
+            "SELECT id FROM mails WHERE mail='{mail}'".format(
+                mail=form.mail.data))
+        db_data = db_curs.fetchall()
+        if len(db_data) == 0:
+            db_curs.execute(
+                "INSERT INTO mails (mail, link_id, created) VALUES \
+                ('{mail}', '{link_id}', '{created}')".format(
+                mail=form.mail.data,
+                link_id=link_id,
+                created=datetime.datetime.now()
+            ))
+            flash('An email containing a password reset URL has been sent \
+                to {mail}'.format(mail=form.mail.data))
+        else:
+            db_curs.execute(
+                "DELETE FROM mails WHERE mail='{mail}'".format(
+                    mail=form.mail.data))
+            db_curs.execute(
+                "REPLACE INTO mails (mail, link_id, created) VALUES \
+                ('{mail}', '{link_id}', '{created}')".format(
+                mail=form.mail.data,
+                link_id=link_id,
+                created=datetime.datetime.now()
+            ))
+            flash('An Email containing a password reset URL has been sent \
+                to {mail}. Previous reset URLs have been \
+                invalidated.'.format(mail=form.mail.data))
+        db_conn.commit()
+        db_conn.close()
+
+        reset_url = 'https://{hostname}/reset/{link_id}'.format(
+            hostname=conf.get('app', 'hostname'),
+            port=conf.getint('app', 'listen_port'),
+            link_id=link_id
+        )
+        send_mail(form.mail.data, reset_url)
+        return redirect(url_for('index'))
 
 @app.route('/reset/<link_id>', methods=['GET', 'POST'])
 def reset(link_id):
@@ -203,7 +204,7 @@ def reset(link_id):
                         '{passwd}'.format(passwd=form.passwd.data))
                 except ldap.CONSTRAINT_VIOLATION:
                     error = 'LDAP error: Password does comply with \
-                                     the password policy set on your LDAP server' 
+                                     the password policy set on your LDAP server'
                     return render_template(
                         'reset.html',
                         error=error,

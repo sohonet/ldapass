@@ -16,19 +16,21 @@
           {% endif %}
         {% endwith %}
         {% if error %}
-        <div class="alert alert-danger">
-          {{ error }}
-        </div>
+          {% for e in error.values() %}
+            <div class="alert alert-danger">
+              {{ e[0] }}
+            </div>
+          {% endfor %}
         {% endif %}
         <form role="form" method="post" action="/" class="form-horizontal">
-		{{ form.hidden_tag() }}
+          {{ form.hidden_tag() }}
           <div class="form-group">
             <label for="passwd" class="col-sm-3 control-label">{{ form.mail.label }}</label>
             <div class="col-sm-6">
-		    {{ form.mail(size=60) }}
+             {{ form.mail(size=60) }}
             </div>
             <div class="col-sm-6">
-		    {{ form.recaptcha }}
+              {{ form.recaptcha }}
             </div>
           </div>
           <div class="form-group">
